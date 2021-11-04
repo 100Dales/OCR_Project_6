@@ -1,6 +1,4 @@
 """
-Script d'automatisation réalisé sur Python
-
 1ère étape :
 - OU : Ordinateurs
 - OU : Utilisateurs
@@ -23,23 +21,23 @@ Créer les OU nécessaires :
     Service Qualité
     Service Production
 
-
 3ème étape :
-Créer les comptes AD sous forme de [prénom.nom]
-option : si doublon que faire ? [prénom1.nom] [prénom2.nom]
+Créer les comptes AD pour chaque utilisateurs
 Créer un MDP Générique : P@ssw0rd!
 Changer le mdp à la première connexion
-
 """
 
+import sys
 import csv
+import os
+import os.path
+# import pypiwin32
 
-# TODO lire un peu la partie typage et hints
-from typing import List, Set, Tuple
+from typing import List, Set, Tuple, Any
 from dataclasses import dataclass
-
-
-# from pyad import *
+from dotenv import load_dotenv
+from pyad import *
+from pyad.adobject import *
 
 # TODO lire plus a propos des decorateurs en python
 @dataclass  # Qu'est ce que c'est ?
@@ -53,35 +51,35 @@ class User:
     service: str
 
     def distinguished_name(self, dcs: List[str]) -> str:
-        # TODO Finir l'implémentation, utiliser str.join (exemple: ''.join(quelquechoses))
-        return f"cn={self.nom}, ou={self.service}, dc"
+        distinguished_name_composition = [self.nom, self.service] + dcs
+        return ', '.join(distinguished_name_composition)
+
+# TODO Installer le package python-dotenv mais bug de python package
+def get_credentials_from_env() -> str: # valider les entrées de .env
+    load_dotenv()
+    AD_LDAP_SERVER = os.getenv(MY_AD_LDAP_SERVER)
+    AD_USERNAME = os.getenv(MY_USERNAME)
+    AD_PASSWORD = os.getenv(MY_PASSWORD)
+
+    if load_dotenv() is False:
+        AD_LDAP_SERVER = input("Quel est votre nom de serveur AD(FQDN) ?")
+        AD_USERNAME = input("Quel est votre nom de compte AD ?")
+        AD_PASSWORD = input("Quel est votre mot de passe ?")
+
+    credentials_name_composition = f"ldap_server={AD_LDAP_SERVER}, username={AD_USERNAME}, password={AD_PASSWORD}"
+    return credentials_name_composition
 
 
-def get_credentials_from_env():
-    # regarderr comment recuperer des env var en python
-    # username = ...
-    # server = ...
-    # password = ...
-    return None
+def connect_to_ad(ad_credentials) -> bool:
+    # The PYAD documentation could be found : https: // zakird.github.io / pyad / pyad.html  # basic-object-manipulation
+    connection = pyad.set_defaults(ad_credentials)
+    return connection
 
 
-def connect_to_ad(credentials):
-    # # Connexion au DC_01 du domaine monentreprise.lan
-    # pyad.set_defaults(ldap_server="DC_01.monentreprise.lan", username="adm_b.latrille", password="P@ssw0rd!")
-    # connection = pyad.set_defaults()
-    pass
-
-
-def setup(ad_connection, default_ous) -> Tuple[bool, str]:
-    return False, 'Not implemented'
-
-
-def extract_services_from_users(users: List[User]) -> Set[str]:
-    return set(user.service for user in users)
-
-
-def init_services(ad_connection, services: Set[str]) -> bool:
-    return False
+def setup(ad_connection, default_ous) -> Tuple[bool, str]: # Pb je dois me référer à une OU de base mais je ne connais pas son nom
+    create_ou_user = pyad.adcontainer.ADContainer.create_container(ou, Utilisateurs)
+    create_ou_workstation = pyad.adcontainer.ADContainer.create_container(ou, Ordinateurs)
+    return True, 'Le setup des OUs a été réalisé
 
 
 def load_csv(filename: str) -> List[User]:  # La fonction load_csv s'attend à ce que l'argument filename soit de type str et le type de retour sune liste utilisateur décrit comme dans le dataclass
@@ -92,25 +90,38 @@ def load_csv(filename: str) -> List[User]:  # La fonction load_csv s'attend à c
             code_postal = int(row['Code Postal'])
             user = User(nom=row['Nom'], prenom=row['Prenom'], telephone=row['Telephone'], adresse=row['Adresse'],
                         ville=row['Ville'], code_postal=code_postal, service=row['Service'])
-            users.append(user)  # Ajoute les utilisateurs à la suite
+            users.append(user)  # Ajoute les utilisateurs les uns à la suite des autres
     return users
+
+
+def extract_services_from_users(users: List[User]) -> Set[str]:
+    services_list = set(user.service for user in users)  # Permet d'avoir un set de services
+    return services_list
+
+
+def init_services(ad_connection, services: Set[str]) -> bool:
+    return services_list
 
 
 def init_users(ad_connection, users: List[User]) -> bool:
     return False
 
 
-# def create_user(user: User) -> bool:  # création user + mdp à changer à la première connexion
-#    return False
-
-
-# services_uniques = set(user.service for user in users) # Permet d'avoir un set de services
-
 # TODO GOOGLE LE IF name == main
 if __name__ == '__main__':
-    # récupérer le premier argument passé au script comme étant le nom de fichier du csv
-    # exemple: python main.py C:\data\user.csv
-    # tester que le fichier existe et au'on peut le lire. Sinon, fail fast -> quitter l'execution directement
+
+    if len(sys.argv) > 1:
+        csv_user_file = sys.argv[1] # récupérer le premier argument passé au script comme étant le nom de fichier du csv
+        dcs = sys.argv[2].split(',') # sys.argv est une string qui devient une liste de string séparé (split) par des virgules
+    else:
+        print(f"Erreur : la liste d'arguement doit être au moins de taille 2.")
+        exit(1)
+    if os.path.exists(csv_user_file) is False:
+        print(f"Erreur : le chemin du fichier n'est pas valide, veuillez mettre en premier argument le chemin du fichier csv.")
+        exit(1)
+    if os.access(csv_user_file, os.R_OK) is False:
+        print(f"Erreur : le fichier n'est pas accessible en lecture.")
+        exit(1)
 
     ad_credentials = get_credentials_from_env()
     ad_connection = connect_to_ad(ad_credentials)
@@ -122,7 +133,7 @@ if __name__ == '__main__':
         exit(1)
 
     filename = "resources/Fichier utilisateurs AD - Données.csv"
-    users: List[User] = load_csv(filename)
+    users: List[User] = load_csv(filename) # A revoir
 
     services: Set[str] = extract_services_from_users(users)
     services_init_success = init_services(ad_connection, services)
