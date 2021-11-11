@@ -1,11 +1,12 @@
 # OCR Project 6
 
-This automation script was developed with Python version 3.9.
+This automation script was developed with Python version 3.9.7.
 
-Its objective is to automate the creation of OUs, users and groups on Windows Server OS from a CSV file.
+Its objective is to automate the creation of OUs and users on Windows Server OS (2016 and more) from a CSV file.
 
 ## Install
-`pip install -r requirements` 
+
+Install requirements on CMD : `pip install -r requirements.txt` 
 
 ## Run
 

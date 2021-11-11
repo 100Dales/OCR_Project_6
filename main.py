@@ -59,27 +59,27 @@ def connect_to_ad(connection_infos: Dict[str, str]) -> bool:
     return False
 
 
- def create_organisational_units(organisational_units: List[str]) -> Tuple[bool, str]:
-     # The PYAD documentation could be found : https: // zakird.github.io / pyad / pyad.html  # basic-object-manipulation
-     from pyad import pyad
-     is_success = True
-     reason = ""
-     formatted_dcs: List[str] = [f"dc={dc}" for dc in dcs]
-     dcs_string = ', '.join(formatted_dcs)
-     users_ou = "Utilisateurs"
-     for unit in organisational_units:
-         organisational_unit = pyad.adcontainer.ADContainer.from_dn(
-             f"ou={users_ou}, {dcs_string}")
-         try:
-             # Create Organisational Units on AD
-             print(f"Creating Organisational Unit : {unit}")
-             pyad.adcontainer.ADContainer.create_container(organisational_unit, unit)
-         except Exception as e:
-             print(f"Something wrong happend for {organisational_unit} : {e}")
-             print(f"Something wrong happend for {unit} : {e}")
-             reason = str(e)
-             is_success = False
-     return is_success, reason
+def create_organisational_units(organisational_units: List[str]) -> Tuple[bool, str]:
+    # The PYAD documentation could be found : https: // zakird.github.io / pyad / pyad.html  # basic-object-manipulation
+    from pyad import pyad
+    is_success = True
+    reason = ""
+    formatted_dcs: List[str] = [f"dc={dc}" for dc in dcs]
+    dcs_string = ', '.join(formatted_dcs)
+    users_ou = "Utilisateurs"
+    for unit in organisational_units:
+        organisational_unit = pyad.adcontainer.ADContainer.from_dn(
+            f"ou={users_ou}, {dcs_string}")
+        try:
+            # Create Organisational Units on AD
+            print(f"Creating Organisational Unit : {unit}")
+            pyad.adcontainer.ADContainer.create_container(organisational_unit, unit)
+        except Exception as e:
+            print(f"Something wrong happend for {organisational_unit} : {e}")
+            print(f"Something wrong happend for {unit} : {e}")
+            reason = str(e)
+            is_success = False
+    return is_success, reason
 
 
 def load_csv(filename: str) -> List[User]:
