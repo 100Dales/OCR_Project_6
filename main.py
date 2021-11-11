@@ -66,10 +66,9 @@ def create_organisational_units(organisational_units: List[str]) -> Tuple[bool, 
     reason = ""
     formatted_dcs: List[str] = [f"dc={dc}" for dc in dcs]
     dcs_string = ', '.join(formatted_dcs)
-    users_ou = "Utilisateurs"
     for unit in organisational_units:
         organisational_unit = pyad.adcontainer.ADContainer.from_dn(
-            f"ou={users_ou}, {dcs_string}")
+            f"ou={USERS_OU}, {dcs_string}")
         try:
             # Create Organisational Units on AD
             print(f"Creating Organisational Unit : {unit}")
@@ -107,10 +106,9 @@ def create_users(users: List[User], dcs: List[str]) -> Tuple[bool, str]:
     reason = ""
     formatted_dcs: List[str] = [f"dc={dc}" for dc in dcs]
     dcs_string = ', '.join(formatted_dcs)
-    users_ou = "Utilisateurs"
     for user in users:
         organisational_unit = pyad.adcontainer.ADContainer.from_dn(
-            f"ou={users_ou}, ou={user.service}, {dcs_string}")
+            f"ou={USERS_OU}, ou={user.service}, {dcs_string}")
         try:
             # Create User by service
             print(f"Creating user : {user.distinguished_name(dcs)}")
@@ -130,6 +128,7 @@ def fail(error_message: str, code: int = 1):
     print(error_message)
     exit(code)
 
+USERS_OU = "Utilisateurs"
 
 if __name__ == '__main__':
     # Parse Command line arguments
