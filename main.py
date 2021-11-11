@@ -66,8 +66,8 @@ def connect_to_ad(connection_infos: Dict[str, str]) -> bool:
      reason = ""
      formatted_dcs: List[str] = [f"dc={dc}" for dc in dcs]
      dcs_string = ', '.join(formatted_dcs)
+     users_ou = "Utilisateurs"
      for unit in organisational_units:
-         users_ou = "Utilisateurs"
          organisational_unit = pyad.adcontainer.ADContainer.from_dn(
              f"ou={users_ou}, {dcs_string}")
          try:
@@ -107,9 +107,10 @@ def create_users(users: List[User], dcs: List[str]) -> Tuple[bool, str]:
     reason = ""
     formatted_dcs: List[str] = [f"dc={dc}" for dc in dcs]
     dcs_string = ', '.join(formatted_dcs)
+    users_ou = "Utilisateurs"
     for user in users:
         organisational_unit = pyad.adcontainer.ADContainer.from_dn(
-            f"ou={USERS_OU}, ou={user.service}, {dcs_string}")
+            f"ou={users_ou}, ou={user.service}, {dcs_string}")
         try:
             # Create User by service
             print(f"Creating user : {user.distinguished_name(dcs)}")
@@ -182,9 +183,5 @@ if __name__ == '__main__':
     exit(0)
 
 
-
 # Pour information, la meme chose version Ternaire (ternary expression)
 # unit_name = f"{parent}/{unit}" if parent is not None else unit
-
-# DEVICES_OU = "Ordinateurs"
-# DEFAULT_OUS = [DEVICES_OU, USERS_OU]
