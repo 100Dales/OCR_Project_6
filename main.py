@@ -1,5 +1,4 @@
 
-
 import sys
 import csv
 import os
@@ -128,7 +127,9 @@ def fail(error_message: str, code: int = 1):
     print(error_message)
     exit(code)
 
+
 USERS_OU = "Utilisateurs"
+
 
 if __name__ == '__main__':
     # Parse Command line arguments
@@ -157,16 +158,11 @@ if __name__ == '__main__':
     if is_connected is None:
         fail("Unable to connect to AD")
 
-    # Create Organisation Units (OU)
-    setup_success, failure_reason = create_organisational_units(USERS_OU)
-    if setup_success is False:
-        fail(f"Error during setup : {failure_reason}")
-
     # Load users and services from external file
     users: List[User] = load_csv(users_csv_filepath)
     services: Set[str] = extract_services_from_users(users)
 
-    # Create entities in Active Directory
+    # Create Organisation Units (OU) in Active Directory
     services_init_success, services_error_message = create_organisational_units(
         list(services)
     )
@@ -184,3 +180,8 @@ if __name__ == '__main__':
 
 # Pour information, la meme chose version Ternaire (ternary expression)
 # unit_name = f"{parent}/{unit}" if parent is not None else unit
+
+    # Create Default OUs
+    # setup_success, failure_reason = create_organisational_units(USERS_OU)
+    # if setup_success is False:
+    #     fail(f"Error during setup : {failure_reason}")
