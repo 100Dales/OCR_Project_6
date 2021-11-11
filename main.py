@@ -1,48 +1,16 @@
-"""
-1ère étape :
-- OU : Ordinateurs
-- OU : Utilisateurs
-    - Services...
-    - Services
-- Groupes
 
-2ème étape :
-
-Lister les Services présents dans le CSV
-Créer les OU nécessaires :
-    Direction
-    Service resources Humaines
-    Service Comptable
-    Service Commercial
-    Service Client
-    Service IT
-    Service Marketing
-    Service Logistique
-    Service Qualité
-    Service Production
-
-3ème étape :
-Créer les comptes AD pour chaque utilisateurs
-Créer un MDP Générique : P@ssw0rd!
-Changer le mdp à la première connexion
-"""
 
 import sys
 import csv
 import os
 import os.path
-# import pypiwin32
 
-from typing import List, Set, Tuple, Any, Optional
+from typing import List, Set, Tuple, Any, Optional, Dict
 from dataclasses import dataclass
+from pyad import pyad_setdefaults
 
 
-# from pyad import *
-# from pyad.adobject import *
-
-
-# TODO lire plus a propos des decorateurs en python
-@dataclass  # Qu'est ce que c'est ?
+@dataclass
 class User:
     nom: str
     prenom: str
@@ -53,7 +21,8 @@ class User:
     service: str
 
     def common_name(self) -> str:
-        return f"{self.prenom.lower().strip()}.{self.nom.lower().strip()}"
+        return f"{self.prenom.lower().strip()}.{self.nom.lower().strip()}" # Mettre en minuscule et sans espace
+
 
     def distinguished_name(self, dcs: List[str]) -> str:
         dn_fragment = f"cn={self.common_name()}, ou={self.service}"
@@ -62,153 +31,160 @@ class User:
         return f"{dn_fragment}, {dcs_fragment}"
 
 
-# TODO Installer le package python-dotenv mais bug de python package
-def get_credentials_from_env() -> Optional[str]:  # valider les entrées de .env
-    server = os.getenv('LDAP_SERVER')
-    username = os.getenv('LDAP_USERNAME')
-    password = os.getenv('LDAP_PASSWORD')
-
-    # Test if any of the username, password or server value is missing or empty
-    # If any value is invalid, then do not connect and return None
-    is_value_invalid = lambda value: value is None or value == ''
-    if any(is_value_invalid(value) for value in [server, username, password]):
+def get_credentials_from_env() -> Optional[Dict[str, str]]:
+    connection_infos = {
+        'ldap_server': os.getenv('LDAP_SERVER'),
+        'username': os.getenv('LDAP_USERNAME'),
+        'password': os.getenv('LDAP_PASSWORD')
+    }
+    connection_infos = {k: v for k, v in connection_infos.items() if v is not None}
+    print(f"AD credentials: {connection_infos}")
+    if len(connection_infos) != 3:
         return None
-    else:
-        connection_string = f"ldap_server={server}, username={username}, password={password}"
-        print(f"Found AD credentials: {connection_string}")
-        return connection_string
+
+    # Note: if too long to wait for timeout, exit here
+    if len(connection_infos) > 0:
+        pyad_setdefaults(**connection_infos)
+    return connection_infos
 
 
-def connect_to_ad(connection_string) -> bool:
-    # The PYAD documentation could be found : https: // zakird.github.io / pyad / pyad.html  # basic-object-manipulation
-    # connection = pyad.set_defaults(ad_credentials)
-    is_success = True
+def connect_to_ad(connection_infos: Dict[str, str]) -> bool:
+    # This runs a connection with the current user credentials
+    print(f"Connecting to AD using: {connection_infos}")
     try:
-        print(f"Connecting to AD using: {connection_string}")
+        from pyad import pyad
+        return True
     except Exception as e:
-        print(f"Unable to connect to AD: {e}")
-        is_success = False
-    return is_success
+        print(f'Error while connecting to ad: {e}')
+    return False
 
 
-def create_organisational_units(ad_connection,
-                                organisational_units: List[str],
-                                parent: Optional[str] = None) -> Tuple[bool, str]:
-    # Pb je dois me référer à une OU de base mais je ne connais pas son nom
-    is_success = True
-    reason = ""
-    print(f"Creating Organisational Units: {', '.join(organisational_units)}")
-    if parent is not None:
-        print(f"Under the parent={parent}")
-
-    for unit in organisational_units:
-        if parent is not None:
-            unit_name = f"{parent}/{unit}"
-        else:
-            unit_name = unit
-        # Pour ton information, la meme chose version Ternaire (ternary expression)
-        # unit_name = f"{parent}/{unit}" if parent is not None else unit
-        try:
-            # Create UNIT on AD
-            # create_ou_workstation = pyad.adcontainer.ADContainer.create_container(ou, Ordinateurs)
-            print(f"\tCreating unit={unit_name}")  # Modifier avec PYAD
-        except Exception as e:
-            print(f"Something bad happened: {e}")
-            reason = str(e)
-            is_success = False
-    return is_success, reason
+ def create_organisational_units(organisational_units: List[str]) -> Tuple[bool, str]:
+     # The PYAD documentation could be found : https: // zakird.github.io / pyad / pyad.html  # basic-object-manipulation
+     from pyad import pyad
+     is_success = True
+     reason = ""
+     formatted_dcs: List[str] = [f"dc={dc}" for dc in dcs]
+     dcs_string = ', '.join(formatted_dcs)
+     for unit in organisational_units:
+         users_ou = "Utilisateurs"
+         organisational_unit = pyad.adcontainer.ADContainer.from_dn(
+             f"ou={users_ou}, {dcs_string}")
+         try:
+             # Create Organisational Units on AD
+             print(f"Creating Organisational Unit : {unit}")
+             pyad.adcontainer.ADContainer.create_container(organisational_unit, unit)
+         except Exception as e:
+             print(f"Something wrong happend for {organisational_unit} : {e}")
+             print(f"Something wrong happend for {unit} : {e}")
+             reason = str(e)
+             is_success = False
+     return is_success, reason
 
 
-# La fonction load_csv s'attend à ce que l'argument filename soit de type str et le type de retour sune liste utilisateur décrit comme dans le dataclass
 def load_csv(filename: str) -> List[User]:
     users = []
+    # Open CSV file and read it as dictionnary
     with open(filename, mode='r') as csv_file:
-        csv_reader = csv.DictReader(csv_file)  # lit les lignes dans un format de dictionnaire
+        csv_reader = csv.DictReader(csv_file)
         for row in csv_reader:
             code_postal = int(row['Code Postal'])
             user = User(nom=row['Nom'], prenom=row['Prenom'], telephone=row['Telephone'], adresse=row['Adresse'],
                         ville=row['Ville'], code_postal=code_postal, service=row['Service'])
-            users.append(user)  # Ajoute les utilisateurs les uns à la suite des autres
+            users.append(user)  # Add the user after the others
     return users
 
 
 def extract_services_from_users(users: List[User]) -> Set[str]:
-    services_list = set(user.service for user in users)  # Permet d'avoir un set de services
+    services_list = set(user.service for user in users)  # Have a set of services
     return services_list
 
 
-def create_users(ad_connection, users: List[User], dcs: List[str]) -> Tuple[bool, str]:
+def create_users(users: List[User], dcs: List[str]) -> Tuple[bool, str]:
+    # The PYAD documentation could be found : https: // zakird.github.io / pyad / pyad.html  # basic-object-manipulation
+    from pyad import pyad
     is_success = True
     reason = ""
+    formatted_dcs: List[str] = [f"dc={dc}" for dc in dcs]
+    dcs_string = ', '.join(formatted_dcs)
     for user in users:
+        organisational_unit = pyad.adcontainer.ADContainer.from_dn(
+            f"ou={USERS_OU}, ou={user.service}, {dcs_string}")
         try:
-            # Create User
-            # created_user = pyad.adcontainer.ADContainer.create_container(ou, Ordinateurs) TODO Replace me
-            print(f"Creating user: {user.distinguished_name(dcs)}")
+            # Create User by service
+            print(f"Creating user : {user.distinguished_name(dcs)}")
+            ad_user = pyad.aduser.ADUser.create(user, organisational_unit, password="P@ssw0rd!", enable=True)
+            # Change password at the first connection
+            # Best Practice : the password should be randomly generated, stored and sent to the user
+            ad_user.force_pwd_change_on_login()
         except Exception as e:
-            print(f"Something bad happend for {user}: {e}")
+            print(f"Something wrong happend for {organisational_unit} : {e}")
+            print(f"Something wrong happend for {user} : {e}")
             reason = str(e)
             is_success = False
     return is_success, reason
 
 
-USERS_OU = "Utilisateurs"
-DEVICES_OU = "Ordinateurs"
-DEFAULT_OUS = [DEVICES_OU, USERS_OU]
-
-
 def fail(error_message: str, code: int = 1):
     print(error_message)
-    print("Usage : ...")
     exit(code)
 
 
-# TODO GOOGLE LE IF name == main
 if __name__ == '__main__':
     # Parse Command line arguments
     users_csv_filepath, dcs = None, None
     if len(sys.argv) > 1:
-        # récupérer le premier argument passé au script comme étant le nom de fichier du csv
+        # get the first argument passed to the script as being the csv file name
         users_csv_filepath = sys.argv[1]
-        # sys.argv est une string qui devient une liste de string séparé (split) par des virgules
+        # sys.argv is a string which becomes a comma separated (split) string list
         dcs = sys.argv[2].split(',')
     else:
-        fail(f"Erreur : la liste d'arguement doit être au moins de taille 2.")
+        fail(f"Error : the argument list must be at least size 2.")
 
-    # Ensure that we can load the users file
+    # Ensure that we can load and read the csv file
     if not os.path.exists(users_csv_filepath):
-        fail(f"Erreur : le chemin du fichier n'est pas valide, "
-             f"veuillez mettre en premier argument le chemin du fichier csv.")
+        fail(f"Error : the file path is not valid, please put the path of the csv file as the first argument.")
     if not os.access(users_csv_filepath, os.R_OK):
-        fail(f"Erreur : le fichier n'est pas accessible en lecture.")
+        fail(f"Error : the file is not readable.")
 
     # Setup AD connection
-    ad_connection_string = get_credentials_from_env()
-    if ad_connection_string is None:
+    ad_connection_infos = get_credentials_from_env()
+    if ad_connection_infos is None:
         fail("Error : missing AD credentials (check your env vars)")
 
-    # if connection fails, what do???
-    ad_connection = connect_to_ad(ad_connection_string)
+    # Connection to Active Directory
+    is_connected = connect_to_ad(ad_connection_infos)
+    if is_connected is None:
+        fail("Unable to connect to AD")
 
     # Create Organisation Units (OU)
-    setup_success, failure_reason = create_organisational_units(ad_connection, DEFAULT_OUS)
+    setup_success, failure_reason = create_organisational_units(USERS_OU)
     if setup_success is False:
-        fail(f"Erreur lors du setup : {failure_reason}")
+        fail(f"Error during setup : {failure_reason}")
 
     # Load users and services from external file
-    users: List[User] = load_csv(users_csv_filepath)  # A revoir
+    users: List[User] = load_csv(users_csv_filepath)
     services: Set[str] = extract_services_from_users(users)
 
-    # Create entities in AD
+    # Create entities in Active Directory
     services_init_success, services_error_message = create_organisational_units(
-        ad_connection, list(services), parent=USERS_OU
+        list(services)
     )
     if services_init_success is False:
-        fail(f"Erreur lors de l'initialisation des services: {services_error_message} !")
+        fail(f"Error initializing services : {services_error_message} !")
 
-    users_init_success, user_error_message = create_users(ad_connection, users, dcs)
+    # Create users by OUs in Active Directory
+    users_init_success, user_error_message = create_users(users, dcs)
     if services_init_success is False:
-        fail(f"Erreur lors de l'initialisation des utilisateurs: {user_error_message} !")
+        fail(f"Error initializing users : {user_error_message} !")
 
-    print("Le script s'est executé correctement ! =)")
+    print("The script executed correctly ! =)")
     exit(0)
+
+
+
+# Pour information, la meme chose version Ternaire (ternary expression)
+# unit_name = f"{parent}/{unit}" if parent is not None else unit
+
+# DEVICES_OU = "Ordinateurs"
+# DEFAULT_OUS = [DEVICES_OU, USERS_OU]
