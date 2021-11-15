@@ -8,6 +8,8 @@ from typing import List, Set, Tuple, Any, Optional, Dict
 from dataclasses import dataclass
 from pyad import pyad_setdefaults
 
+from pyad.adobject import *
+
 
 @dataclass
 class User:
@@ -163,9 +165,7 @@ if __name__ == '__main__':
     services: Set[str] = extract_services_from_users(users)
 
     # Create Organisation Units (OU) in Active Directory
-    services_init_success, services_error_message = create_organisational_units(
-        list(services)
-    )
+    services_init_success, services_error_message = create_organisational_units(list(services))
     if services_init_success is False:
         fail(f"Error initializing services : {services_error_message} !")
 
@@ -176,12 +176,3 @@ if __name__ == '__main__':
 
     print("The script executed correctly ! =)")
     exit(0)
-
-
-# Pour information, la meme chose version Ternaire (ternary expression)
-# unit_name = f"{parent}/{unit}" if parent is not None else unit
-
-    # Create Default OUs
-    # setup_success, failure_reason = create_organisational_units(USERS_OU)
-    # if setup_success is False:
-    #     fail(f"Error during setup : {failure_reason}")
