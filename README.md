@@ -17,9 +17,10 @@ LDAP_USERNAME
 LDAP_PASSWORD
 ```
 
-To load environment if you are under Windows, run : `loadenv.bat` in the folder `Scripts`
+To load environment if you are under Windows, run on your terminal command :
+`loadenv.bat` in the folder `Scripts`
 
-To load environment if you are under Linux, run:
+To load environment if you are under Linux, run on your terminal command :
 `set -o allexport; source .env; set +o allexport`
 
 ## Run

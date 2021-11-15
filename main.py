@@ -65,11 +65,11 @@ def create_organisational_units(organisational_units: List[str]) -> Tuple[bool, 
     from pyad import pyad
     is_success = True
     reason = ""
-    formatted_dcs: List[str] = [f"dc={dc}" for dc in dcs]
-    dcs_string = ', '.join(formatted_dcs)
+    formatted_dcs: List[str] = [f"DC={dc}" for dc in dcs]
+    dcs_string = ','.join(formatted_dcs)
     for unit in organisational_units:
         organisational_unit = pyad.adcontainer.ADContainer.from_dn(
-            f"ou={USERS_OU}, {dcs_string}")
+            f"ou={USERS_OU},{dcs_string}")
         try:
             # Create Organisational Units on AD
             print(f"Creating Organisational Unit : {unit}")
@@ -105,11 +105,11 @@ def create_users(users: List[User], dcs: List[str]) -> Tuple[bool, str]:
     from pyad import pyad
     is_success = True
     reason = ""
-    formatted_dcs: List[str] = [f"dc={dc}" for dc in dcs]
-    dcs_string = ', '.join(formatted_dcs)
+    formatted_dcs: List[str] = [f"DC={dc}" for dc in dcs]
+    dcs_string = ','.join(formatted_dcs)
     for user in users:
         organisational_unit = pyad.adcontainer.ADContainer.from_dn(
-            f"ou={USERS_OU}, ou={user.service}, {dcs_string}")
+            f"OU={user.service},OU={USERS_OU},{dcs_string}")
         try:
             # Create User by service
             print(f"Creating user : {user.distinguished_name(dcs)}")
