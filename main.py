@@ -113,7 +113,7 @@ def create_users(users: List[User], dcs: List[str]) -> Tuple[bool, str]:
         try:
             # Create User by service
             print(f"Creating user : {user.distinguished_name(dcs)}")
-            ad_user = pyad.aduser.ADUser.create(user, organisational_unit, password="P@ssw0rd!", enable=True)
+            ad_user = pyad.aduser.ADUser.create(str(user), organisational_unit, password="P@ssw0rd!", enable=True)
             # Change password at the first connection
             # Best Practice : the password should be randomly generated, stored and sent to the user
             ad_user.force_pwd_change_on_login()
