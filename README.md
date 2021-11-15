@@ -4,7 +4,12 @@ This automation script was developed with Python version 3.9.7.
 
 Its objective is to automate the creation of OUs and users on Windows Server OS (2016 and more) from a CSV file.
 
-The spreadsheet need to be like this : [![Image](https://i.goopics.net/2pm8xm.png)](https://goopics.net/i/2pm8xm)
+The spreadsheet need to be like this (you've got an example with randoms 150 users in _resources_ folder) :
+[![Image](https://i.goopics.net/2pm8xm.png)](https://goopics.net/i/2pm8xm)
+
+Fields "Nom", "Prenom", "Telephone", "Adresse", "Ville" and "Service" are _strings_.
+
+Field "Code Postal" is an _integer_.
 
 **WARNING** : If your spreadsheet is different, you have to change the source code !
 

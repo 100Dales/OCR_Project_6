@@ -22,7 +22,7 @@ class User:
     service: str
 
     def common_name(self) -> str:
-        return f"{self.prenom.lower().strip()}.{self.nom.lower().strip()}" # Mettre en minuscule et sans espace
+        return f"{self.prenom.lower().strip()}.{self.nom.lower().strip()}" # Put in lowercase and without spaces
 
 
     def distinguished_name(self, dcs: List[str]) -> str:
